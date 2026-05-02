@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>World Explorer — Weather & Clocks</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#030a1e;font-family:sans-serif;min-height:100vh}
+.wrap{position:relative;min-height:100vh;overflow:hidden}
+canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+.ui{position:relative;z-index:2;max-width:860px;margin:0 auto;padding:20px 16px}
+.glass-header{background:rgba(10,15,40,0.82);border:1px solid rgba(120,180,255,0.2);border-radius:14px;padding:12px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.app-title{font-size:20px;font-weight:700;color:#7ec8ff;letter-spacing:3px}
+.app-sub{font-size:11px;color:rgba(120,180,255,0.5);letter-spacing:1px;margin-top:2px}
+.live-dot{width:9px;height:9px;border-radius:50%;background:#4eff91;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tabs{display:flex;gap:10px;margin-bottom:16px}
+.tab{padding:9px 24px;border-radius:24px;border:1px solid rgba(120,180,255,0.25);background:rgba(10,15,40,0.6);color:rgba(180,220,255,0.65);cursor:pointer;font-size:14px;transition:all .2s}
+.tab.active{background:rgba(60,120,255,0.35);border-color:rgba(100,180,255,0.6);color:#a8d8ff;font-weight:600}
+.tab:hover{background:rgba(40,80,200,0.3)}
+.srow{display:flex;gap:8px;margin-bottom:12px}
+.srow input{flex:1;background:rgba(10,15,50,0.82);border:1px solid rgba(100,160,255,0.35);border-radius:10px;padding:10px 16px;color:#c8e8ff;font-size:14px;outline:none;transition:border .2s}
+.srow input::placeholder{color:rgba(140,180,230,0.4)}
+.srow input:focus{border-color:rgba(100,180,255,0.7)}
+.srow button{background:rgba(50,110,255,0.45);border:1px solid rgba(100,180,255,0.4);border-radius:10px;padding:10px 22px;color:#a8d8ff;font-size:14px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.srow button:hover{background:rgba(70,140,255,0.6)}
+.srow button:active{transform:scale(.97)}
+.prow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.pbtn{padding:5px 13px;background:rgba(20,30,70,0.7);border:1px solid rgba(80,150,255,0.2);border-radius:20px;color:rgba(160,210,255,0.75);font-size:12px;cursor:pointer;transition:all .15s}
+.pbtn:hover{background:rgba(50,100,255,0.3);color:#c0e4ff;border-color:rgba(120,190,255,0.5)}
+.wcard{background:rgba(8,14,45,0.88);border:1px solid rgba(80,160,255,0.22);border-radius:16px;padding:20px;margin-bottom:12px}
+.cname{font-size:24px;font-weight:700;color:#d0eeff;letter-spacing:1px}
+.cntry{font-size:13px;color:rgba(140,200,255,0.55);margin-top:4px}
+.tbig{font-size:56px;font-weight:700;color:#7ce0ff;line-height:1}
+.tunit{font-size:22px;color:rgba(120,200,255,0.5)}
+.wdesc{font-size:14px;color:rgba(160,220,255,0.65);margin-top:6px}
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.sbox{background:rgba(15,25,70,0.65);border:1px solid rgba(60,120,255,0.18);border-radius:10px;padding:12px;text-align:center}
+.slabel{font-size:10px;color:rgba(120,180,255,0.5);margin-bottom:5px;letter-spacing:1px;text-transform:uppercase}
+.sval{font-size:16px;font-weight:600;color:#9dd4ff}
+.frow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:14px}
+.fday{background:rgba(15,25,70,0.6);border:1px solid rgba(60,120,255,0.15);border-radius:10px;padding:10px;text-align:center}
+.flabel{font-size:10px;color:rgba(120,180,255,0.5);margin-bottom:5px;letter-spacing:1px}
+.ficon{font-size:24px;margin-bottom:5px}
+.fhi{font-size:14px;font-weight:600;color:#8dd4ff}
+.flo{font-size:12px;color:rgba(120,180,255,0.45);margin-top:2px}
+.msg{text-align:center;padding:28px;font-size:14px}
+.msg.err{color:#ff9a9a}
+.msg.load{color:rgba(140,200,255,0.65)}
+.section-title{font-size:10px;color:rgba(100,180,255,0.4);letter-spacing:1px;margin:14px 0 7px;text-transform:uppercase}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.ccard{background:rgba(8,14,45,0.82);border:1px solid rgba(80,150,255,0.18);border-radius:12px;padding:14px;transition:border-color .2s,background .2s}
+.ccard:hover{border-color:rgba(100,200,255,0.42);background:rgba(12,20,60,0.88)}
+.ccountry{font-size:13px;font-weight:600;color:#b8dcff}
+.ctz{font-size:10px;color:rgba(100,160,255,0.45);margin-bottom:8px;letter-spacing:.4px}
+.ctime{font-size:22px;font-weight:700;color:#5ce8ff;letter-spacing:2px;font-variant-numeric:tabular-nums}
+.cdate{font-size:11px;color:rgba(100,180,255,0.45);margin-top:3px}
+footer{text-align:center;padding:24px;color:rgba(100,160,255,0.3);font-size:11px;letter-spacing:1px}
+@media(max-width:600px){
+  .sgrid{grid-template-columns:repeat(2,1fr)}
+  .frow{grid-template-columns:repeat(3,1fr)}
+  .app-title{font-size:15px;letter-spacing:2px}
+  .cgrid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<canvas id="bg"></canvas>
+<div class="ui">
+
+  <div class="glass-header">
+    <div>
+      <div class="app-title">WORLD EXPLORER</div>
+      <div class="app-sub">Weather Forecast &amp; World Clocks</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;color:rgba(120,200,255,0.5);letter-spacing:1px">LIVE</span>
+      <div class="live-dot"></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-w" onclick="switchTab('weather')">Weather Forecast</button>
+    <button class="tab" id="tab-c" onclick="switchTab('clocks')">World Clocks</button>
+  </div>
+
+  <div id="weather-panel">
+    <div class="srow">
+      <input type="text" id="city-input" placeholder="Enter city name e.g. London, Tokyo, Mumbai..." onkeydown="if(event.key==='Enter')doSearch()"/>
+      <button onclick="doSearch()">Search</button>
+    </div>
+    <div class="prow" id="pbtns"></div>
+    <div id="wx-out"></div>
+  </div>
+
+  <div id="clocks-panel" style="display:none">
+    <div class="srow" style="margin-bottom:14px">
+      <input type="text" id="csearch" placeholder="Filter by country or timezone..." oninput="filterC()"/>
+    </div>
+    <div class="cgrid" id="cgrid"></div>
+  </div>
+
+  <footer>World Explorer &copy; 2026 &nbsp;|&nbsp; Powered by Open-Meteo API</footer>
+</div>
+</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('bg'),ctx=cv.getContext('2d');
+  let W,H,stars=[],meteors=[];
+  function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;initStars()}
+  function initStars(){
+    stars=[];
+    for(let i=0;i<260;i++){
+      stars.push({
+        x:Math.random()*W,y:Math.random()*H,
+        r:Math.random()*1.5+.3,
+        t:Math.random()*Math.PI*2,
+        sp:Math.random()*.012+.004,
+        c:['rgba(168,216,255,','rgba(255,232,168,','rgba(200,240,255,','rgba(255,255,255,'][Math.floor(Math.random()*4)]
+      });
+    }
+  }
+  function spawnMeteor(){
+    if(meteors.length<3&&Math.random()<.008)
+      meteors.push({x:Math.random()*W*.7+80,y:0,vx:1.5+Math.random()*2,vy:2+Math.random()*3,life:1,len:50+Math.random()*60});
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#030a1e';ctx.fillRect(0,0,W,H);
+    [[W*.15,H*.25,160,100,'rgba(40,60,200,.07)'],[W*.78,H*.55,180,110,'rgba(80,20,180,.06)'],[W*.5,H*.82,220,65,'rgba(20,80,160,.055)']].forEach(([x,y,rx,ry,c])=>{
+      const g=ctx.createRadialGradient(x,y,0,x,y,rx);
+      g.addColorStop(0,c);g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.save();ctx.scale(1,ry/rx);ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y*(rx/ry),rx,0,Math.PI*2);ctx.fill();ctx.restore();
+    });
+    stars.forEach(s=>{
+      s.t+=s.sp;
+      const a=.25+Math.abs(Math.sin(s.t))*.75;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=s.c+a.toFixed(2)+')';ctx.fill();
+    });
+    spawnMeteor();
+    meteors=meteors.filter(m=>{
+      m.x+=m.vx;m.y+=m.vy;m.life-=.018;
+      if(m.life<=0||m.y>H)return false;
+      ctx.save();ctx.globalAlpha=m.life*.8;ctx.strokeStyle='#c0e8ff';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(m.x,m.y);ctx.lineTo(m.x-m.vx*(m.len/5),m.y-m.vy*(m.len/5));ctx.stroke();ctx.restore();
+      return true;
+    });
+    const vg=ctx.createLinearGradient(0,H*.5,0,H);
+    vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(3,10,30,.65)');
+    ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+    requestAnimationFrame(draw);
+  }
+  resize();draw();
+  window.addEventListener('resize',resize);
+})();
+
+const WMO={0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Icy fog',51:'Light drizzle',53:'Drizzle',55:'Dense drizzle',61:'Slight rain',63:'Moderate rain',65:'Heavy rain',71:'Slight snow',73:'Moderate snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Snow showers',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};
+const WICO={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'❄️',75:'❄️',77:'🌨️',80:'🌦️',81:'🌦️',82:'⛈️',85:'🌨️',86:'❄️',95:'⛈️',96:'⛈️',99:'⛈️'};
+const gi=c=>WICO[c]||'🌡️',gd=c=>WMO[c]||'Unknown';
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const POP=['London','New York','Tokyo','Dubai','Sydney','Paris','Mumbai','Singapore','Cairo','Toronto','Berlin','Moscow','Bangalore'];
+
+const pb=document.getElementById('pbtns');
+POP.forEach(city=>{
+  const b=document.createElement('button');
+  b.className='pbtn';b.textContent=city;
+  b.onclick=()=>{document.getElementById('city-input').value=city;doSearch();};
+  pb.appendChild(b);
+});
+
+async function doSearch(){
+  const city=(document.getElementById('city-input').value||'').trim();
+  if(!city)return;
+  const out=document.getElementById('wx-out');
+  out.innerHTML='<div class="msg load">Scanning global weather data...</div>';
+  try{
+    const gRes=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(city)+'&count=1&language=en&format=json');
+    if(!gRes.ok)throw new Error('Geocoding service unavailable');
+    const gData=await gRes.json();
+    if(!gData.results||!gData.results.length){
+      out.innerHTML='<div class="msg err">City not found. Try another spelling or a nearby city.</div>';
+      return;
+    }
+    const loc=gData.results[0];
+    const wRes=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+loc.latitude+'&longitude='+loc.longitude+'&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5');
+    if(!wRes.ok)throw new Error('Weather service unavailable');
+    const wData=await wRes.json();
+    const cur=wData.current,daily=wData.daily;
+    if(!cur||!daily)throw new Error('Unexpected data format');
+    let fc='';
+    for(let i=0;i<5;i++){
+      const d=new Date(daily.time[i]+'T12:00:00');
+      fc+=`<div class="fday"><div class="flabel">${i===0?'TODAY':DAYS[d.getDay()]}</div><div class="ficon">${gi(daily.weather_code[i])}</div><div class="fhi">${Math.round(daily.temperature_2m_max[i])}°</div><div class="flo">${Math.round(daily.temperature_2m_min[i])}°</div></div>`;
+    }
+    out.innerHTML=`<div class="wcard">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="cname">${loc.name}</div>
+          <div class="cntry">${loc.country||''}${loc.admin1?' &middot; '+loc.admin1:''}</div>
+          <div class="wdesc" style="margin-top:10px">${gd(cur.weather_code)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:52px;line-height:1">${gi(cur.weather_code)}</div>
+          <div style="margin-top:6px"><span class="tbig">${Math.round(cur.temperature_2m)}</span><span class="tunit">°C</span></div>
+          <div style="font-size:12px;color:rgba(140,200,255,.55);margin-top:3px">Feels like ${Math.round(cur.apparent_temperature)}°C</div>
+        </div>
+      </div>
+      <div class="sgrid">
+        <div class="sbox"><div class="slabel">Humidity</div><div class="sval">${cur.relative_humidity_2m}%</div></div>
+        <div class="sbox"><div class="slabel">Wind</div><div class="sval">${Math.round(cur.wind_speed_10m)} km/h</div></div>
+        <div class="sbox"><div class="slabel">Precip</div><div class="sval">${cur.precipitation} mm</div></div>
+        <div class="sbox"><div class="slabel">Condition</div><div class="sval" style="font-size:12px">${gd(cur.weather_code)}</div></div>
+      </div>
+      <div class="section-title">5-day forecast</div>
+      <div class="frow">${fc}</div>
+    </div>`;
+  }catch(err){
+    out.innerHTML='<div class="msg err">Could not load weather data. Check your internet connection and try again.<br><small style="opacity:.55;margin-top:6px;display:block">'+err.message+'</small></div>';
+  }
+}
+
+const ZONES=[
+  {c:'Afghanistan',f:'🇦🇫',tz:'Asia/Kabul'},{c:'Albania',f:'🇦🇱',tz:'Europe/Tirane'},
+  {c:'Algeria',f:'🇩🇿',tz:'Africa/Algiers'},{c:'Argentina',f:'🇦🇷',tz:'America/Argentina/Buenos_Aires'},
+  {c:'Australia (Sydney)',f:'🇦🇺',tz:'Australia/Sydney'},{c:'Australia (Perth)',f:'🇦🇺',tz:'Australia/Perth'},
+  {c:'Austria',f:'🇦🇹',tz:'Europe/Vienna'},{c:'Bangladesh',f:'🇧🇩',tz:'Asia/Dhaka'},
+  {c:'Belgium',f:'🇧🇪',tz:'Europe/Brussels'},{c:'Bolivia',f:'🇧🇴',tz:'America/La_Paz'},
+  {c:'Brazil (São Paulo)',f:'🇧🇷',tz:'America/Sao_Paulo'},{c:'Canada (Toronto)',f:'🇨🇦',tz:'America/Toronto'},
+  {c:'Canada (Vancouver)',f:'🇨🇦',tz:'America/Vancouver'},{c:'Chile',f:'🇨🇱',tz:'America/Santiago'},
+  {c:'China',f:'🇨🇳',tz:'Asia/Shanghai'},{c:'Colombia',f:'🇨🇴',tz:'America/Bogota'},
+  {c:'Cuba',f:'🇨🇺',tz:'America/Havana'},{c:'Denmark',f:'🇩🇰',tz:'Europe/Copenhagen'},
+  {c:'Ecuador',f:'🇪🇨',tz:'America/Guayaquil'},{c:'Egypt',f:'🇪🇬',tz:'Africa/Cairo'},
+  {c:'Ethiopia',f:'🇪🇹',tz:'Africa/Addis_Ababa'},{c:'Finland',f:'🇫🇮',tz:'Europe/Helsinki'},
+  {c:'France',f:'🇫🇷',tz:'Europe/Paris'},{c:'Germany',f:'🇩🇪',tz:'Europe/Berlin'},
+  {c:'Ghana',f:'🇬🇭',tz:'Africa/Accra'},{c:'Greece',f:'🇬🇷',tz:'Europe/Athens'},
+  {c:'Hong Kong',f:'🇭🇰',tz:'Asia/Hong_Kong'},{c:'Hungary',f:'🇭🇺',tz:'Europe/Budapest'},
+  {c:'India',f:'🇮🇳',tz:'Asia/Kolkata'},{c:'Indonesia',f:'🇮🇩',tz:'Asia/Jakarta'},
+  {c:'Iran',f:'🇮🇷',tz:'Asia/Tehran'},{c:'Iraq',f:'🇮🇶',tz:'Asia/Baghdad'},
+  {c:'Ireland',f:'🇮🇪',tz:'Europe/Dublin'},{c:'Israel',f:'🇮🇱',tz:'Asia/Jerusalem'},
+  {c:'Italy',f:'🇮🇹',tz:'Europe/Rome'},{c:'Japan',f:'🇯🇵',tz:'Asia/Tokyo'},
+  {c:'Jordan',f:'🇯🇴',tz:'Asia/Amman'},{c:'Kazakhstan',f:'🇰🇿',tz:'Asia/Almaty'},
+  {c:'Kenya',f:'🇰🇪',tz:'Africa/Nairobi'},{c:'South Korea',f:'🇰🇷',tz:'Asia/Seoul'},
+  {c:'Kuwait',f:'🇰🇼',tz:'Asia/Kuwait'},{c:'Lebanon',f:'🇱🇧',tz:'Asia/Beirut'},
+  {c:'Malaysia',f:'🇲🇾',tz:'Asia/Kuala_Lumpur'},{c:'Mexico',f:'🇲🇽',tz:'America/Mexico_City'},
+  {c:'Morocco',f:'🇲🇦',tz:'Africa/Casablanca'},{c:'Myanmar',f:'🇲🇲',tz:'Asia/Rangoon'},
+  {c:'Nepal',f:'🇳🇵',tz:'Asia/Kathmandu'},{c:'Netherlands',f:'🇳🇱',tz:'Europe/Amsterdam'},
+  {c:'New Zealand',f:'🇳🇿',tz:'Pacific/Auckland'},{c:'Nigeria',f:'🇳🇬',tz:'Africa/Lagos'},
+  {c:'Norway',f:'🇳🇴',tz:'Europe/Oslo'},{c:'Pakistan',f:'🇵🇰',tz:'Asia/Karachi'},
+  {c:'Peru',f:'🇵🇪',tz:'America/Lima'},{c:'Philippines',f:'🇵🇭',tz:'Asia/Manila'},
+  {c:'Poland',f:'🇵🇱',tz:'Europe/Warsaw'},{c:'Portugal',f:'🇵🇹',tz:'Europe/Lisbon'},
+  {c:'Qatar',f:'🇶🇦',tz:'Asia/Qatar'},{c:'Romania',f:'🇷🇴',tz:'Europe/Bucharest'},
+  {c:'Russia (Moscow)',f:'🇷🇺',tz:'Europe/Moscow'},{c:'Russia (Vladivostok)',f:'🇷🇺',tz:'Asia/Vladivostok'},
+  {c:'Saudi Arabia',f:'🇸🇦',tz:'Asia/Riyadh'},{c:'Singapore',f:'🇸🇬',tz:'Asia/Singapore'},
+  {c:'South Africa',f:'🇿🇦',tz:'Africa/Johannesburg'},{c:'Spain',f:'🇪🇸',tz:'Europe/Madrid'},
+  {c:'Sri Lanka',f:'🇱🇰',tz:'Asia/Colombo'},{c:'Sweden',f:'🇸🇪',tz:'Europe/Stockholm'},
+  {c:'Switzerland',f:'🇨🇭',tz:'Europe/Zurich'},{c:'Taiwan',f:'🇹🇼',tz:'Asia/Taipei'},
+  {c:'Tanzania',f:'🇹🇿',tz:'Africa/Dar_es_Salaam'},{c:'Thailand',f:'🇹🇭',tz:'Asia/Bangkok'},
+  {c:'Turkey',f:'🇹🇷',tz:'Europe/Istanbul'},{c:'UAE',f:'🇦🇪',tz:'Asia/Dubai'},
+  {c:'Ukraine',f:'🇺🇦',tz:'Europe/Kiev'},{c:'United Kingdom',f:'🇬🇧',tz:'Europe/London'},
+  {c:'USA (New York)',f:'🇺🇸',tz:'America/New_York'},{c:'USA (Chicago)',f:'🇺🇸',tz:'America/Chicago'},
+  {c:'USA (Los Angeles)',f:'🇺🇸',tz:'America/Los_Angeles'},{c:'USA (Denver)',f:'🇺🇸',tz:'America/Denver'},
+  {c:'USA (Honolulu)',f:'🇺🇸',tz:'Pacific/Honolulu'},{c:'Uruguay',f:'🇺🇾',tz:'America/Montevideo'},
+  {c:'Venezuela',f:'🇻🇪',tz:'America/Caracas'},{c:'Vietnam',f:'🇻🇳',tz:'Asia/Ho_Chi_Minh'}
+];
+
+let visZ=[...ZONES];
+
+function renderC(zones){
+  document.getElementById('cgrid').innerHTML=zones.map(z=>`
+    <div class="ccard" id="cc-${z.tz.replace(/\//g,'_')}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:20px">${z.f}</span>
+        <div>
+          <div class="ccountry">${z.c}</div>
+          <div class="ctz">${z.tz}</div>
+        </div>
+      </div>
+      <div class="ctime" style="margin-top:10px">--:--:--</div>
+      <div class="cdate">...</div>
+    </div>`).join('');
+}
+
+function tickC(){
+  const now=new Date();
+  visZ.forEach(z=>{
+    const el=document.getElementById('cc-'+z.tz.replace(/\//g,'_'));
+    if(!el)return;
+    try{
+      el.querySelector('.ctime').textContent=new Intl.DateTimeFormat('en-GB',{timeZone:z.tz,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(now);
+      el.querySelector('.cdate').textContent=new Intl.DateTimeFormat('en-GB',{timeZone:z.tz,weekday:'short',day:'numeric',month:'short',year:'numeric'}).format(now);
+    }catch(e){}
+  });
+}
+
+function filterC(){
+  const q=document.getElementById('csearch').value.toLowerCase();
+  visZ=ZONES.filter(z=>z.c.toLowerCase().includes(q)||z.tz.toLowerCase().includes(q));
+  renderC(visZ);tickC();
+}
+
+function switchTab(t){
+  document.getElementById('tab-w').classList.toggle('active',t==='weather');
+  document.getElementById('tab-c').classList.toggle('active',t==='clocks');
+  document.getElementById('weather-panel').style.display=t==='weather'?'':'none';
+  document.getElementById('clocks-panel').style.display=t==='clocks'?'':'none';
+  if(t==='clocks'){renderC(ZONES);tickC();}
+}
+
+renderC(ZONES);tickC();
+setInterval(tickC,1000);
+</script>
+</body>
+</html>
